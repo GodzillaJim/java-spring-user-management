@@ -6,6 +6,7 @@ import com.godzillajim.user_management.appuser.AppUserService;
 import com.godzillajim.user_management.exceptions.EmailAlreadyConfirmedException;
 import com.godzillajim.user_management.exceptions.TokenExpiredException;
 import com.godzillajim.user_management.exceptions.WrongEmailFormatException;
+import com.godzillajim.user_management.mails.EmailSender;
 import com.godzillajim.user_management.registration.token.ConfirmationToken;
 import com.godzillajim.user_management.registration.token.ConfirmationTokenService;
 import lombok.AllArgsConstructor;
@@ -20,12 +21,13 @@ public class RegistrationService {
     private EmailValidator emailValidator;
     private final AppUserService appUserService;
     private final ConfirmationTokenService confirmationTokenService;
+    private final EmailSender emailSender;
     public String register(RegistrationRequest request){
         boolean isValid = emailValidator.test(request.getEmail());
         if(!isValid){
             throw new WrongEmailFormatException("Email not valid");
         }
-        return appUserService.signUpUser(
+        String token =  appUserService.signUpUser(
                 new AppUser(
                         request.getFirstName(),
                         request.getLastName(),
@@ -34,6 +36,10 @@ public class RegistrationService {
                         AppUserRole.USER
                 )
         );
+        String link = "http://localhost:8080/api/v1/users/register/confirm" +
+                "?token="+token;
+        emailSender.send(request.getEmail(), link);
+        return token;
     }
     @Transactional
     public String confirmToken(String token){
